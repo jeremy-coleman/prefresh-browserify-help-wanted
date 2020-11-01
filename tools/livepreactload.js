@@ -82,6 +82,12 @@ function LiveReactloadPlugin(b, opts = {}) {
   //   clientRequires.push(RHLPatchModule)
   // } catch (e) {}
 
+  //   try {
+  //   const RHLPatchModule = '@prefresh/core';
+  //   require.resolve(RHLPatchModule)
+  //   clientRequires.push(RHLPatchModule)
+  // } catch (e) {}
+
   const clientOpts = {
     nodeModulesRoot: resolve(process.cwd(), "node_modules"),
     port: Number(port),
@@ -196,15 +202,19 @@ function LiveReactloadPlugin(b, opts = {}) {
           });
 
           const args = [withFixedDepsIds, entries, clientOpts];
+
           let bundleSrc = `(${loader.toString()})(${args
             .map((a) => JSON.stringify(a, null, 2))
             .join(", ")});`;
 
           this.push(Buffer.from(bundleSrc, "utf8"));
 
+          
+
           server.notifyReload(withFixedDepsIds);
 
           next();
+
         }
       )
     );
@@ -222,8 +232,9 @@ function LiveReactloadPlugin(b, opts = {}) {
 function loader(mappings, entryPoints, options) {
   const { host = "localhost", protocol = "ws", port = 3000 } = options;
 
+
   if (entryPoints.length > 1) {
-    throw new Error("[HOT]Please use only one entry point");
+    throw new Error("[HOT] Please use only one entry point");
   }
 
   var entryId = entryPoints[0];
@@ -379,12 +390,13 @@ function loader(mappings, entryPoints, options) {
 
       var originalCache = scope.cache[id];
 
-      //idk about this
+      //delete cache entry
       if (id in scope.cache) {
         delete scope.cache[id];
       }
 
       var deps = vals(scope.mappings[id][1]).filter(isLocalModule);
+
       var depsChanged = deps.map((dep) => evaluate(dep, changeCache));
 
       var isReloaded = originalCache !== undefined && id in scope.cache;
@@ -397,22 +409,27 @@ function loader(mappings, entryPoints, options) {
         if (!isReloaded) {
           var hook = scope.reloadHooks[id];
 
+          //check for hook, new module, or existing module
           if (typeof hook === "function" && hook()) {
             console.log(" > Manually accepted", id);
             scope.cache[id] = originalCache;
             changeCache[id] = false;
-          } else {
+          } 
+          else {
             contains(newMods, id)
               ? console.log(" > New module::", id)
               : console.log(" > Reloading::", id);
+            
             load(id);
             changeCache[id] = true;
           }
-        } else {
+        } 
+        else {
           console.log(" > Already reloaded ::", id);
         }
         return changeCache[id];
-      } else {
+      } 
+      else {
         // restore old version of the module
         if (originalCache !== undefined) {
           scope.cache[id] = originalCache;

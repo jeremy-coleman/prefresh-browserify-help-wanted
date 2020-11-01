@@ -29,7 +29,7 @@ var bundler = browserify('src/index.tsx', {
         // ],
         plugins: [
           ["@babel/plugin-transform-typescript", { isTSX: true }],
-          //["@babel/plugin-transform-typescript"],
+          //["@prefresh/babel-plugin"],
           ["@babel/plugin-proposal-decorators", { legacy: true }],
           ["@babel/plugin-syntax-object-rest-spread"],
           ["@babel/plugin-proposal-class-properties", { loose: true }],

@@ -11,7 +11,7 @@ const Test = () =>
   useObserver(() => {
     return (
       <div>
-        <header>App Header</header>
+        <header>App Headers</header>
         <h1 style={{ textAlign: "center" }}>Count: {model.counter}</h1>
         <input
           type="range"

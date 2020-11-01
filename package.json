@@ -16,6 +16,9 @@
     "insert-css": "2.0.0"
   },
   "devDependencies": {
+    "@prefresh/utils": "1.0.0",
+    "@prefresh/core": "1.1.1",
+    "@prefresh/babel-plugin": "0.2.2",
     "lodash": "4.17.20",
     "aliasify": "2.1.0",
     "browserify": "17.0.0",
