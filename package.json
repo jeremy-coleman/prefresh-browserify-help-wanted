@@ -1,0 +1,35 @@
+{
+  "name": "@coglite/workspace",
+  "version": "1.0.0",
+  "author": "h",
+  "license": "MIT",
+  "main": "src/index.tsx",
+  "scripts": {
+    "start": "node start",
+    "fix": "npm audit fix && npm audit"
+  },
+  "dependencies": {
+    "preact": "10.5.5",
+    "iaktta.preact": "0.1.2",
+    "inject-css": "0.2.1"
+  },
+  "d": {
+    "browserify": "17.0.0",
+    "aliasify": "2.1.0"
+  },
+  "devDependencies": {
+    "sucrase": "3.16.0",
+    "@babel/core": "7.12.3",
+    "@babel/plugin-syntax-object-rest-spread": "7.8.3",
+    "@babel/plugin-transform-modules-commonjs": "7.12.1",
+    "@babel/plugin-transform-react-jsx": "7.12.1",
+    "@babel/plugin-proposal-class-properties": "7.12.1",
+    "@babel/plugin-proposal-decorators": "7.12.1",
+    "@babel/preset-typescript": "7.12.1",
+    "babel-plugin-module-resolver": "4.0.0",
+    "babelify": "10.0.0",
+    "less": "3.12.2",
+    "typescript": "4.0.5",
+    "kleur": "4.1.3"
+  }
+}
