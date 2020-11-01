@@ -69,13 +69,13 @@ var watcher = watchifyMiddleware.emitter(bundler, {
   errorHandler: true
 })
 
-watcher.on('pending', function () {
-  console.log('pending request')
-})
+// watcher.on('pending', function () {
+//   console.log('pending request')
+// })
 
-watcher.on('update', function () {
-  console.log('update request')
-})
+// watcher.on('update', function () {
+//   console.log('update request')
+// })
 
 watcher.on('log', function (ev) {
   if (ev.elapsed) {
@@ -83,7 +83,9 @@ watcher.on('log', function (ev) {
     ev.url = staticUrl
   }
   ev.name = 'server'
-  console.log(JSON.stringify(ev))
+
+  //console.log(JSON.stringify(ev))
+
 })
 
 var middleware = watcher.middleware
@@ -109,4 +111,4 @@ const logMemory = () => {
   }, 10000);
 };
 
-logMemory()
+//logMemory()

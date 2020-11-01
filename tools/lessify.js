@@ -20,6 +20,9 @@ function end() {
 
   function jsToLoad(css) {
     var stringifiedCss = JSON.stringify(css);
+
+    //console.log(stringifiedCss)
+    
     if (autoInject) {
       return "var css = "+ stringifiedCss +";(require('insert-css'))(css); module.exports = css;";
     } else {

@@ -1,7 +1,7 @@
 
 var createWatchify = require('./watchify')
 var {EventEmitter} = require('events')
-var debounce = require('debounce')
+var debounce = require('lodash/debounce')
 var concat = require('concat-stream')
 
 var ansiRegex = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nqry=><]/g;

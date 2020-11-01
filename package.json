@@ -4,7 +4,7 @@
   "author": "h",
   "license": "MIT",
   "main": "src/index.tsx",
-  "repo":"https://github.com/jeremy-coleman/prefresh-browserify-help-wanted",
+  "repo": "https://github.com/jeremy-coleman/prefresh-browserify-help-wanted",
   "scripts": {
     "start": "node start",
     "fix": "npm audit fix && npm audit"
@@ -12,9 +12,11 @@
   "dependencies": {
     "preact": "10.5.5",
     "iaktta.preact": "0.1.2",
-    "inject-css": "0.2.1"
+    "unistore": "3.5.2",
+    "insert-css": "2.0.0"
   },
   "devDependencies": {
+    "lodash": "4.17.20",
     "aliasify": "2.1.0",
     "browserify": "17.0.0",
     "sucrase": "3.16.0",

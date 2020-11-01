@@ -3,9 +3,14 @@ import through from "through2";
 import { Server } from "./ws";
 import clc from "kleur";
 
-function log(msg, ...data) {
+function logWithTimestamp(msg, ...data) {
   const t = /T([0-9:.]+)Z/g.exec(new Date().toISOString())[1];
   console.log(clc.green(`[${t}]HMR WSS]`) + "::" + clc.cyan(msg));
+  data.forEach((d) => console.log(clc.yellow("  >"), clc.yellow(d)));
+}
+
+function log(msg, ...data) {
+  console.log(clc.green(`[HMR WSS] ${clc.cyan(msg)}`));
   data.forEach((d) => console.log(clc.yellow("  >"), clc.yellow(d)));
 }
 
@@ -17,11 +22,11 @@ function logError(error) {
 
 function startServer({ port }) {
   var wss = new Server({ port });
-  log(`[HMR]:Listening@port:${port}`);
+  log(`Listening@port:${port}`);
 
   const server = {
     notifyReload(metadata) {
-      log("Notify clients about bundle change");
+      log("Sending bundle data");
 
       wss.clients.forEach((client) => {
         client.send(
@@ -509,7 +514,7 @@ function loader(mappings, entryPoints, options) {
     if (options.debug) {
       console.log.apply(
         console,
-        ["LiveReactload [DEBUG] ::"].concat(
+        ["HMR-SOCKET [DEBUG] ::"].concat(
           Array.prototype.slice.call(arguments)
         )
       );
@@ -517,15 +522,15 @@ function loader(mappings, entryPoints, options) {
   }
 
   function info(msg) {
-    console.info("LiveReactload ::", msg);
+    console.info("HMR-SOCKET ::", msg);
   }
 
   function warn(msg) {
-    console.warn("LiveReactload ::", msg);
+    console.warn("HMR-SOCKET ::", msg);
   }
 
   function error(msg) {
-    console.error("LiveReactload ::", msg);
+    console.error("HMR-SOCKET ::", msg);
   }
 }
 
