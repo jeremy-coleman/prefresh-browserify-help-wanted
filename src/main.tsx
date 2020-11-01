@@ -4,6 +4,8 @@ import { model } from "./model";
 
 import "./style.less";
 
+//this will already hot reload and keep state, moving the model into this file will cause it to lose state on reload. hopefully @prefresh/core can help!
+
 const Test = () =>
   useObserver(() => {
     return (

@@ -3,7 +3,6 @@ var http = require('http')
 var defaultIndex = require('./tools/simple-html-index')
 const babelify = require("babelify");
 const {hmr, tsxify, lessify} = require("./tools/browserify-transforms");
-//var lessify = require("lessify");
 var browserify = require('browserify')
 
 var staticUrl = 'main.js'

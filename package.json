@@ -4,6 +4,7 @@
   "author": "h",
   "license": "MIT",
   "main": "src/index.tsx",
+  "repo":"https://github.com/jeremy-coleman/prefresh-browserify-help-wanted",
   "scripts": {
     "start": "node start",
     "fix": "npm audit fix && npm audit"
@@ -13,11 +14,9 @@
     "iaktta.preact": "0.1.2",
     "inject-css": "0.2.1"
   },
-  "d": {
-    "browserify": "17.0.0",
-    "aliasify": "2.1.0"
-  },
   "devDependencies": {
+    "aliasify": "2.1.0",
+    "browserify": "17.0.0",
     "sucrase": "3.16.0",
     "@babel/core": "7.12.3",
     "@babel/plugin-syntax-object-rest-spread": "7.8.3",
