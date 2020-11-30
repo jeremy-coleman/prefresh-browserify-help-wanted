@@ -10,30 +10,25 @@
     "fix": "npm audit fix && npm audit"
   },
   "dependencies": {
-    "preact": "10.5.5",
+    "preact": "10.5.7",
     "iaktta.preact": "0.1.2",
-    "unistore": "3.5.2",
     "insert-css": "2.0.0"
   },
   "devDependencies": {
-    "@prefresh/utils": "1.0.0",
-    "@prefresh/core": "1.1.1",
-    "@prefresh/babel-plugin": "0.2.2",
+    "tinyify": "3.0.0",
     "lodash": "4.17.20",
-    "aliasify": "2.1.0",
     "browserify": "17.0.0",
     "sucrase": "3.16.0",
-    "@babel/core": "7.12.3",
+    "@babel/core": "7.12.9",
     "@babel/plugin-syntax-object-rest-spread": "7.8.3",
     "@babel/plugin-transform-modules-commonjs": "7.12.1",
-    "@babel/plugin-transform-react-jsx": "7.12.1",
+    "@babel/plugin-transform-react-jsx": "7.12.7",
     "@babel/plugin-proposal-class-properties": "7.12.1",
     "@babel/plugin-proposal-decorators": "7.12.1",
-    "@babel/preset-typescript": "7.12.1",
+    "@babel/preset-typescript": "7.12.7",
     "babel-plugin-module-resolver": "4.0.0",
     "babelify": "10.0.0",
     "less": "3.12.2",
-    "typescript": "4.0.5",
-    "kleur": "4.1.3"
+    "typescript": "4.1.2"
   }
 }

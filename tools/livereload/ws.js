@@ -1,14 +1,17 @@
 'use strict';
-import { createHash, randomBytes, randomFillSync } from 'crypto';
-import { EventEmitter } from 'events';
-import http, { createServer, STATUS_CODES } from 'http';
-import https from 'https';
-import net from 'net';
-import { Writable } from 'stream';
-import tls from 'tls';
-import url from 'url';
-import zlib from 'zlib';
+const { createHash, randomBytes, randomFillSync } = require('crypto');
+const { EventEmitter } = require('events');
+const http = require('http');
+const { createServer, STATUS_CODES } = http;
+const https = require('https');
+const net = require('net');
+const { Writable } = require('stream');
+const tls = require('tls');
+const url = require('url');
+const zlib = require('zlib');
+
 var URL = url.URL;
+
 var constants = {
     BINARY_TYPES: ['nodebuffer', 'arraybuffer', 'fragments'],
     GUID: '258EAFA5-E914-47DA-95CA-C5AB0DC85B11',
@@ -1994,4 +1997,9 @@ function abortHandshake(socket, code, message, headers) {
     socket.removeListener('error', socketOnError);
     socket.destroy();
 }
-export { WebSocketServer as Server };
+
+module.exports = {
+    Server: WebSocketServer
+}
+
+//export { WebSocketServer as Server };

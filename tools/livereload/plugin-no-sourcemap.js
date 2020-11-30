@@ -1,16 +1,31 @@
-import { resolve } from "path";
-import through from "through2";
-import { Server } from "./ws";
-import clc from "kleur";
+var path = require("path");
+const { Server } = require("./ws");
+var through = require("through2");
+const { createHash } = require("crypto");
 
-function logWithTimestamp(msg, ...data) {
-  const t = /T([0-9:.]+)Z/g.exec(new Date().toISOString())[1];
-  console.log(clc.green(`[${t}]HMR WSS]`) + "::" + clc.cyan(msg));
-  data.forEach((d) => console.log(clc.yellow("  >"), clc.yellow(d)));
-}
+const colors = {
+  reset: "\x1b[0m",
+  underline: "\x1b[4m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m",
+  crimson: "\x1b[38m",
+};
+
+const clc = {
+  green: (v) => colors.green + `${v}` + colors.reset,
+  cyan: (v) => colors.cyan + `${v}` + colors.reset,
+  yellow: (v) => colors.yellow + `${v}` + colors.reset,
+};
 
 function log(msg, ...data) {
-  console.log(clc.green(`[HMR WSS] ${clc.cyan(msg)}`));
+  // const t = /T([0-9:.]+)Z/g.exec(new Date().toISOString())[1];
+  // console.log(clc.green(`[${t}] ReactHMR`), "::", clc.cyan(msg));
+  console.log(clc.green(`[LiveReloadPlugin]:`), clc.cyan(msg));
   data.forEach((d) => console.log(clc.yellow("  >"), clc.yellow(d)));
 }
 
@@ -22,12 +37,10 @@ function logError(error) {
 
 function startServer({ port }) {
   var wss = new Server({ port });
-  log(`Listening@port:${port}`);
-
+  log(`[HMR]:Listening@port:${port}`);
   const server = {
     notifyReload(metadata) {
-      log("Sending bundle data");
-
+      log("Notify clients about bundle change");
       wss.clients.forEach((client) => {
         client.send(
           JSON.stringify({
@@ -38,10 +51,8 @@ function startServer({ port }) {
         );
       });
     },
-
     notifyBundleError(error) {
       log("Notify clients about bundle error");
-
       wss.clients.forEach((client) => {
         client.send(
           JSON.stringify({
@@ -53,110 +64,36 @@ function startServer({ port }) {
       });
     },
   };
-
   wss.on("connection", (client) => {
     log("New client connected");
   });
-
   return server;
 }
 
-function LiveReactloadPlugin(b, opts = {}) {
-  const {
-    port = 4474,
-    host = null,
-    client = true,
-    dedupe = true,
-    debug = false,
-  } = opts;
 
-  // server is alive as long as watchify is running
+function LiveReloadPlugin(b, opts = {}) {
+  const { port = 4474, host = null, runtimeDependencies = [] } = opts;
   const server = startServer({ port: Number(port) });
-
-  // require('preact/devtools') , require('@prefresh/browserify')
-  let clientRequires = [];
-
-  // try {
-  //   const RHLPatchModule = 'react-hot-loader';
-  //   require.resolve(RHLPatchModule)
-  //   clientRequires.push(RHLPatchModule)
-  // } catch (e) {}
-
-  //   try {
-  //   const RHLPatchModule = '@prefresh/core';
-  //   require.resolve(RHLPatchModule)
-  //   clientRequires.push(RHLPatchModule)
-  // } catch (e) {}
-
   const clientOpts = {
-    nodeModulesRoot: resolve(process.cwd(), "node_modules"),
+    nodeModulesRoot: path.resolve(process.cwd(), "node_modules"),
     port: Number(port),
     host: host,
-    clientEnabled: client,
-    debug: debug,
-    clientRequires: clientRequires,
+    runtimeDependencies: runtimeDependencies,
   };
-
-  clientRequires.forEach((file) => b.require(file, opts));
-
+  runtimeDependencies.forEach((file) => b.require(file));
   b.on("reset", addHooks);
   addHooks();
-
   function addHooks() {
     var mappings = {};
-    var pathById = {};
-    var pathByIdx = {};
     var entries = [];
-
-    const idToPath = (id) =>
-      pathById[id] || String(id) || throws("Full path not found for id: " + id);
-
-    const idxToPath = (idx) =>
-      pathByIdx[idx] ||
-      String(idx) ||
-      throws("Full path not found for index: " + idx);
-
     b.pipeline.on("error", server.notifyBundleError);
-
-    b.pipeline.get("record").push(
-      through.obj((row, enc, next) => {
-        next(null, row);
-      })
-    );
-
-    b.pipeline.get("sort").push(
-      through.obj((row, enc, next) => {
-        const { id, index, file } = row;
-        pathById[id] = file;
-        pathByIdx[index] = file;
-        next(null, row);
-      })
-    );
-
-    b.pipeline.splice(
-      "dedupe",
-      0,
-      through.obj((row, enc, next) => {
-        const cloned = Object.assign({}, row);
-        if (row.dedupeIndex) {
-          cloned.dedupeIndex = idxToPath(row.dedupeIndex);
-        }
-        if (row.dedupe) {
-          cloned.dedupe = idToPath(row.dedupe);
-        }
-        next(null, cloned);
-      })
-    );
-
     b.pipeline.get("label").push(
       through.obj(
         (row, enc, next) => {
           const { id, file, source, deps, entry } = row;
-
           if (entry) {
             entries.push(file);
           }
-
           mappings[file] = [
             source,
             deps,
@@ -188,7 +125,6 @@ function LiveReactloadPlugin(b, opts = {}) {
             ).map(([file, [s, d, { browserifyId: id }]]) => [id, file])
           );
           const idToPath = (id) => pathById[id] || String(id);
-
           const depsToPaths = (deps) => {
             let obj = {};
             for (let [k, v] of Object.entries(deps)) {
@@ -196,62 +132,41 @@ function LiveReactloadPlugin(b, opts = {}) {
             }
             return obj;
           };
-
           const withFixedDepsIds = mapValues(mappings, ([src, deps, meta]) => {
             return [src, depsToPaths(deps), meta];
           });
-
           const args = [withFixedDepsIds, entries, clientOpts];
-
+          
           let bundleSrc = `(${loader.toString()})(${args
             .map((a) => JSON.stringify(a, null, 2))
             .join(", ")});`;
 
           this.push(Buffer.from(bundleSrc, "utf8"));
-
-          
-
           server.notifyReload(withFixedDepsIds);
-
           next();
-
         }
       )
-    );
-  }
-
-  function throws(msg) {
-    throw new Error(msg);
+    )
+    
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                   loader                                   */
-/* -------------------------------------------------------------------------- */
-
 function loader(mappings, entryPoints, options) {
   const { host = "localhost", protocol = "ws", port = 3000 } = options;
-
-
   if (entryPoints.length > 1) {
-    throw new Error("[HOT] Please use only one entry point");
+    throw new Error("[BHOT]Please use only one entry point");
   }
-
   var entryId = entryPoints[0];
-
   var scope = {
     mappings: mappings,
     cache: {},
     reloadHooks: {},
   };
-
   function startClient() {
     var ws = new WebSocket(`ws://localhost:${port}`);
-
     ws.onopen = () => {
       info("[HMR]:Listening for changes");
     };
-
     ws.onmessage = (m) => {
       var msg = JSON.parse(m.data);
       switch (msg.type) {
@@ -270,16 +185,27 @@ function loader(mappings, entryPoints, options) {
   function compile(mapping) {
     var body = mapping[0];
     if (typeof body !== "function") {
-      mapping[0] = eval(`((require, module, exports) => {${body}})`);
+      debug("Compiling module", mapping[2]);
+      var compiled = compileModule(body, mapping[2].sourcemap);
+      mapping[0] = compiled;
       mapping[2].source = body;
     }
   }
+
+  function compileModule(source, sourcemap) {
+    var toModule = new Function(
+      "__livereactload_source",
+      "__livereactload_sourcemap",
+      "return eval('function __livereactload_module(require, module, exports){\\n' + __livereactload_source + '\\n}; __livereactload_module;' + (__livereactload_sourcemap || ''));"
+    );
+    return toModule(source, sourcemap);
+  }
+
 
   // returns module from cache or the source then caches it
   function load(id, recur) {
     var mappings = scope.mappings;
     var cache = scope.cache;
-
     if (!cache[id]) {
       if (!mappings[id]) {
         var req = typeof require == "function" && require;
@@ -288,7 +214,6 @@ function loader(mappings, entryPoints, options) {
         error["code"] = "MODULE_NOT_FOUND";
         throw error;
       }
-
       var module = (cache[id] = {
         exports: {},
         hot: {
@@ -297,13 +222,11 @@ function loader(mappings, entryPoints, options) {
           },
         },
       });
-
       //(require, module, exports) => body
       const _moduleRequire = (path) => {
         var targetId = mappings[id][1][path];
         return load(targetId ? targetId : path);
       };
-
       mappings[id][0].call(
         module.exports,
         _moduleRequire,
@@ -316,37 +239,29 @@ function loader(mappings, entryPoints, options) {
 
   /**
    * Patches the existing modules with new sources and returns a list of changes
-   * (module id and old mapping. ATTENTION: This function does not do any reloading yet.
+   * (module id and old mapping). This function does not do any reloading yet.
    */
   function patch(mappings) {
     var changes = [];
-
     Object.keys(mappings).forEach((id) => {
       var old = scope.mappings[id];
       var mapping = mappings[id];
       var meta = mapping[2];
-
       if (!old || old[2].hash !== meta.hash) {
         compile(mapping);
         scope.mappings[id] = mapping;
         changes.push([id, old]);
       }
     });
-
     return changes;
   }
 
   /** Reloads modules based on the given changes or tries to restore previous code.
-    @param changes Changes array received from "patch" function */
+      changes are an array received from "patch" function */
+
   function reload(changes) {
     var changedModules = changes.map((c) => c[0]);
     var newMods = changes.filter((c) => !c[1]).map((c) => c[0]);
-
-    // Promise.resolve(evaluate(entryId, {}))
-    //   .catch(e => {
-    //     restore();
-    //     evaluate(entryId, {})
-    //   })
 
     try {
       info("Applying changes...");
@@ -354,7 +269,8 @@ function loader(mappings, entryPoints, options) {
       debug("New modules", newMods);
       evaluate(entryId, {});
       info("Reload complete!");
-    } catch (e) {
+    } 
+    catch (e) {
       error(
         "Error occurred while reloading changes. Restoring old implementation..."
       );
@@ -384,52 +300,37 @@ function loader(mappings, entryPoints, options) {
         debug("Module", id, "is an external module. Do not reload");
         return false;
       }
-
       var meChanged = contains(changedModules, id);
       changeCache[id] = meChanged;
-
       var originalCache = scope.cache[id];
-
-      //delete cache entry
+      //idk about this
       if (id in scope.cache) {
         delete scope.cache[id];
       }
-
       var deps = vals(scope.mappings[id][1]).filter(isLocalModule);
-
       var depsChanged = deps.map((dep) => evaluate(dep, changeCache));
-
       var isReloaded = originalCache !== undefined && id in scope.cache;
-
       var depChanged = any(depsChanged);
-
       if (isReloaded || depChanged || meChanged) {
         debug("Module changed", id, isReloaded, depChanged, meChanged);
-
         if (!isReloaded) {
           var hook = scope.reloadHooks[id];
-
-          //check for hook, new module, or existing module
           if (typeof hook === "function" && hook()) {
             console.log(" > Manually accepted", id);
             scope.cache[id] = originalCache;
             changeCache[id] = false;
-          } 
-          else {
+          } else {
             contains(newMods, id)
               ? console.log(" > New module::", id)
               : console.log(" > Reloading::", id);
-            
             load(id);
             changeCache[id] = true;
           }
-        } 
-        else {
+        } else {
           console.log(" > Already reloaded ::", id);
         }
         return changeCache[id];
-      } 
-      else {
+      } else {
         // restore old version of the module
         if (originalCache !== undefined) {
           scope.cache[id] = originalCache;
@@ -440,18 +341,22 @@ function loader(mappings, entryPoints, options) {
 
     function restore() {
       changes.forEach(function (c) {
-        var id = c[0],
-          mapping = c[1];
+        var id = c[0]
+        var mapping = c[1];
+
         if (mapping) {
           debug("Restore old mapping", id);
           scope.mappings[id] = mapping;
-        } else {
+        } 
+        else {
           debug("Delete new mapping", id);
           delete scope.mappings[id];
         }
+
       });
     }
   }
+
 
   function handleBundleChange(newMappings) {
     info("Bundle changed");
@@ -463,36 +368,42 @@ function loader(mappings, entryPoints, options) {
     }
   }
 
+
   function handleBundleError(data) {
     error("Bundling error occurred");
     error(data.error);
   }
 
+
   // prepare mappings before starting the app
   forEachValue(scope.mappings, compile);
-
   debug("Options:", options);
   debug("Entries:", entryPoints, entryId);
-
   startClient();
 
-  if (options.clientRequires && options.clientRequires.length) {
-    options.clientRequires.forEach(load);
+  if (options.runtimeDependencies && options.runtimeDependencies.length) {
+    options.runtimeDependencies.forEach(load);
   }
+
+
   // standalone bundles may need the exports from entry module
   return load(entryId);
+
 
   function isLocalModule(id) {
     return id.indexOf(options.nodeModulesRoot) === -1;
   }
 
+
   function isExternalModule(id) {
     return !(id in scope.mappings);
   }
 
+
   function keys(obj) {
     return obj ? Object.keys(obj) : [];
   }
+
 
   function vals(obj) {
     return keys(obj).map(function (key) {
@@ -500,12 +411,14 @@ function loader(mappings, entryPoints, options) {
     });
   }
 
+
   function contains(col, val) {
     for (var i = 0; i < col.length; i++) {
       if (col[i] === val) return true;
     }
     return false;
   }
+
 
   function any(col, f) {
     if (!f) {
@@ -519,6 +432,7 @@ function loader(mappings, entryPoints, options) {
     return false;
   }
 
+
   function forEachValue(obj, fn) {
     keys(obj).forEach((key) => {
       if (obj.hasOwnProperty(key)) {
@@ -527,30 +441,28 @@ function loader(mappings, entryPoints, options) {
     });
   }
 
+
   function debug(...args) {
     if (options.debug) {
       console.log.apply(
         console,
-        ["HMR-SOCKET [DEBUG] ::"].concat(
-          Array.prototype.slice.call(arguments)
-        )
+        ["LiveReactload [DEBUG] ::"].concat(Array.prototype.slice.call(args))
       );
     }
   }
 
   function info(msg) {
-    console.info("HMR-SOCKET ::", msg);
+    console.info("LiveReactload ::", msg);
   }
-
   function warn(msg) {
-    console.warn("HMR-SOCKET ::", msg);
+    console.warn("LiveReactload ::", msg);
   }
-
   function error(msg) {
-    console.error("HMR-SOCKET ::", msg);
+    console.error("LiveReactload ::", msg);
   }
-}
 
+
+}
 function mapValues(object, iteratee) {
   var result = {};
   Object.entries(object).forEach(([key, value]) => {
@@ -559,139 +471,8 @@ function mapValues(object, iteratee) {
   return result;
 }
 
-//murmurhash2_32_gc
 function getHash(str) {
-  var l = str.length,
-    h = l ^ l,
-    i = 0,
-    k;
-
-  while (l >= 4) {
-    k =
-      (str.charCodeAt(i) & 0xff) |
-      ((str.charCodeAt(++i) & 0xff) << 8) |
-      ((str.charCodeAt(++i) & 0xff) << 16) |
-      ((str.charCodeAt(++i) & 0xff) << 24);
-
-    k =
-      (k & 0xffff) * 0x5bd1e995 + ((((k >>> 16) * 0x5bd1e995) & 0xffff) << 16);
-    k ^= k >>> 24;
-    k =
-      (k & 0xffff) * 0x5bd1e995 + ((((k >>> 16) * 0x5bd1e995) & 0xffff) << 16);
-
-    h =
-      ((h & 0xffff) * 0x5bd1e995 +
-        ((((h >>> 16) * 0x5bd1e995) & 0xffff) << 16)) ^
-      k;
-
-    l -= 4;
-    ++i;
-  }
-
-  switch (l) {
-    case 3:
-      h ^= (str.charCodeAt(i + 2) & 0xff) << 16;
-    case 2:
-      h ^= (str.charCodeAt(i + 1) & 0xff) << 8;
-    case 1:
-      h ^= str.charCodeAt(i) & 0xff;
-      h =
-        (h & 0xffff) * 0x5bd1e995 +
-        ((((h >>> 16) * 0x5bd1e995) & 0xffff) << 16);
-  }
-
-  h ^= h >>> 13;
-  h = (h & 0xffff) * 0x5bd1e995 + ((((h >>> 16) * 0x5bd1e995) & 0xffff) << 16);
-  h ^= h >>> 15;
-
-  return (h >>> 0).toString(36);
+  return createHash("sha1").update(str).digest("hex");
 }
 
-//const createHmrServerPlugin = () => LiveReactloadPlugin
-
-module.exports = LiveReactloadPlugin;
-
-
-//if (!old || old[2].hash !== meta.hash) {
-
-//console.log(scope.mappings);
-//console.log(old);
-// scope.reloadHooks[id] = function() {
-//   let m = keys(scope.cache[id].exports)
-//   let __PSELF__ = scope.mappings[id];
-//   //@ts-ignore
-//   for (let i in m) self.__PREFRESH__.replaceComponent(__PSELF__[i], m[i])
-//   //for (let i in m) replaceComponent(__PSELF__[i], m[i])
-// }
-// let __PSELF__ = scope.mappings[id]
-// let m = keys(scope.cache[id].exports)
-// for (let i in m) self.__PREFRESH__.replaceComponent(__PSELF__[i], m[i])
-// for (let i in _m) console.log(_m[i] , __PSELF__[i])
-
-// console.log(keys(scope.cache[id].exports))
-// console.log(scope.mappings[id][2].source)
-// console.log(old)
-
-// switch(dedupe) {
-//   case true: {
-//     b.pipeline.splice("dedupe", 0, through.obj(
-//       function transform(row, enc, next) {
-//         const cloned = _.extend({}, row)
-//         if (row.dedupeIndex) {
-//           cloned.dedupeIndex = idxToPath(row.dedupeIndex)
-//         }
-//         if (row.dedupe) {
-//           cloned.dedupe = idToPath(row.dedupe)
-//         }
-//         next(null, cloned)
-//       }
-//     ))
-//   }
-//   break;
-//   case false: {
-//     b.pipeline.splice("dedupe", 1, through.obj())
-//     if (b.pipeline.get("dedupe")) {
-//       log("Other plugins have added de-duplicate transformations. --no-dedupe is not effective")
-//     }
-//   }
-// }
-
-// b.pipeline.get("label").push(through.obj(
-//   function transform(row, enc, next) {
-//     const {id, file, source, deps, entry} = row
-//     const converter = convert.fromSource(source)
-//     let sourceWithoutMaps = source
-//     let adjustedSourcemap = ''
-//     let hash;
-
-//     if (converter) {
-//       const sources = converter.getProperty("sources") || [];
-//       sourceWithoutMaps = convert.removeComments(source)
-//       hash = getHash(sourceWithoutMaps)
-//       converter.setProperty("sources", sources.map(source => source += "?version=" + hash))
-//       adjustedSourcemap = convert.fromObject(offsetSourceMaps(converter.toObject(), 1)).toComment()
-//     }
-//     else {
-//       hash = getHash(source)
-//     }
-//     if (entry) {
-//       entries.push(file)
-//     }
-//     mappings[file] = [sourceWithoutMaps, deps, {id: file, hash: hash, browserifyId: id, sourcemap: adjustedSourcemap}]
-//     next(null, row)
-//   },
-//   function flush(next) {
-//     next()
-//   }
-// ))
-
-// type FileMapping = [
-//   any,
-//   any,
-// {
-//   id: string,
-//   hash: string,
-//   browserifyId: number,
-//   sourcemap: string | null | undefined
-// }
-// ]
+module.exports = LiveReloadPlugin;

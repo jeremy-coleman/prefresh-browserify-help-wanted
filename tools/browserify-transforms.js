@@ -1,7 +1,6 @@
-require("sucrase/register")
-const hmr = require("./livepreactload")
-const {tsxify} = require('./tsxify')
-const {lessify} = require("./lessify")
+const hmr = require("./livereload/plugin-no-sourcemap")
+const {tsxify} = require('./transforms/tsxify')
+const {lessify} = require("./transforms/lessify")
 
 module.exports = {
     hmr,
